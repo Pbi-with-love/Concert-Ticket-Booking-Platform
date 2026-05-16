@@ -1,0 +1,128 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Concert {
+  id          String   @id @default(uuid())
+  name        String
+  venue       String
+  startTime   DateTime
+  status      String
+
+  ticketCategories TicketCategory[]
+  bookings         Booking[]
+}
+
+model TicketCategory {
+  id                  String   @id @default(uuid())
+  concertId           String
+  name                String
+  price               Decimal
+  totalQuantity       Int
+  availableQuantity   Int
+
+  concert        Concert       @relation(fields: [concertId], references: [id])
+  bookingItems   BookingItem[]
+  attendees      Attendee[]
+}
+
+model Voucher {
+  id             String   @id @default(uuid())
+  code           String   @unique
+  
+  // PERCENTAGE | FIXED
+  discountType   String
+  discountValue  Decimal
+  maxUsage       Int
+  usedCount      Int      @default(0)
+  startDate      DateTime
+  endDate        DateTime
+  isActive       Boolean  @default(true)
+
+  bookings       Booking[]
+}
+
+model Booking {
+  id                String   @id @default(uuid())
+  bookingCode       String   @unique
+  customerEmail     String   @index
+  customerName  String
+  customerPhone String
+
+  concertId         String   @index
+  voucherId         String?
+
+  // PENDING | CONFIRMED | CANCELLED | EXPIRED
+  status            String
+  subtotal          Decimal  @default(0)
+  discountAmount    Decimal  @default(0)
+  finalAmount       Decimal  @default(0)
+
+  idempotencyKey    String   @unique
+  expiresAt         DateTime
+  createdAt         DateTime @default(now())
+
+  concert           Concert   @relation(fields: [concertId], references: [id])
+  voucher           Voucher?  @relation(fields: [voucherId], references: [id])
+
+  bookingItems      BookingItem[]
+  payments          Payment[]
+}
+
+model BookingItem {
+  id                String   @id @default(uuid())
+  bookingId         String   @index  
+  ticketCategoryId  String   @index
+
+  quantity          Int
+  unitPrice         Decimal
+  lineTotal         Decimal
+  discountAmount    Decimal  @default(0)
+
+  booking           Booking         @relation(fields: [bookingId], references: [id])
+  ticketCategory    TicketCategory  @relation(fields: [ticketCategoryId], references: [id])
+
+  attendees         Attendee[]
+}
+
+model Payment {
+  id              String   @id @default(uuid())
+  bookingId       String
+
+  provider        String
+  transactionId   String   @unique
+  amount          Decimal
+  status          String
+
+  createdAt       DateTime @default(now())
+  paidAt          DateTime?
+
+  booking         Booking  @relation(fields: [bookingId], references: [id])
+}
+
+model Attendee {
+  id              String   @id @default(uuid())
+
+  bookingItemId   String
+  ticketCategoryId String
+
+  ticketCode      String   @unique
+  fullName        String
+  email           String
+  phone           String
+
+  /*
+    Booking status:
+    - PENDING
+    - CHECKED_IN
+  */
+  checkInStatus   String   @default("PENDING")
+  checkInAt       DateTime?
+
+  bookingItem     BookingItem   @relation(fields: [bookingItemId], references: [id])
+  ticketCategory  TicketCategory @relation(fields: [ticketCategoryId], references: [id])
+}
