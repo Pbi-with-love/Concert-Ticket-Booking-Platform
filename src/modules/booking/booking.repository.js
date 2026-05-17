@@ -6,14 +6,6 @@ export const findBookingByIdempotencyKeyRepository = async (idempotencyKey) => {
     where: {
       idempotencyKey,
     },
-    include: {
-      bookingItems: {
-        include: {
-          ticketCategory: true,
-        },
-      },
-      voucher: true,
-    },
   });
 };
 
@@ -127,7 +119,6 @@ export const createBookingTransactionRepository = async ({
         quantity: item.quantity,
         unitPrice,
         lineTotal,
-        discountAmount: 0,
       });
     }
 
@@ -184,70 +175,87 @@ export const findMyBookingsRepository = async (customerEmail) => {
   });
 };
 
-export const findBookingByIdForCancelRepository = async (bookingId) => {
-  return prisma.booking.findUnique({
+export const findBookingByIdForCancelRepository = async (tx, bookingId) => {
+  return tx.booking.findUnique({
     where: {
       id: bookingId,
     },
     include: {
-      bookingItems: true,
+      bookingItems: {
+        include: {
+          ticketCategory: true,
+        },
+      },
       voucher: true,
     },
   });
 };
 
-export const cancelBookingTransactionRepository = async (booking) => {
-  return prisma.$transaction(async (tx) => {
-    await tx.booking.update({
-      where: {
-        id: booking.id,
+export const markBookingCancelledIfNotCancelledRepository = async (
+  tx,
+  bookingId,
+) => {
+  return tx.booking.updateMany({
+    where: {
+      id: bookingId,
+      status: {
+        not: "CANCELLED",
       },
-      data: {
-        status: "CANCELLED",
-      },
-    });
+    },
+    data: {
+      status: "CANCELLED",
+    },
+  });
+};
 
-    for (const item of booking.bookingItems) {
-      await tx.ticketCategory.update({
-        where: {
-          id: item.ticketCategoryId,
-        },
-        data: {
-          availableQuantity: {
-            increment: item.quantity,
-          },
-        },
-      });
-    }
-
-    if (booking.voucherId) {
-      await tx.voucher.updateMany({
-        where: {
-          id: booking.voucherId,
-          usedCount: {
-            gt: 0,
-          },
-        },
-        data: {
-          usedCount: {
-            decrement: 1,
-          },
-        },
-      });
-    }
-
-    return tx.booking.findUnique({
-      where: {
-        id: booking.id,
+export const incrementTicketCategoryAvailableQuantityRepository = async (
+  tx,
+  ticketCategoryId,
+  quantity,
+) => {
+  return tx.ticketCategory.update({
+    where: {
+      id: ticketCategoryId,
+    },
+    data: {
+      availableQuantity: {
+        increment: quantity,
       },
-      include: {
-        bookingItems: {
-          include: {
-            ticketCategory: true,
-          },
-        },
-        voucher: true,
+    },
+  });
+};
+
+export const decrementVoucherUsedCountIfPositiveRepository = async (
+  tx,
+  voucherId,
+) => {
+  return tx.voucher.updateMany({
+    where: {
+      id: voucherId,
+      usedCount: {
+        gt: 0,
       },
-    });
+    },
+    data: {
+      usedCount: {
+        decrement: 1,
+      },
+    },
+  });
+};
+
+export const findBookingByIdWithDetailsRepository = async (tx, bookingId) => {
+  return tx.booking.findUnique({
+    where: {
+      id: bookingId,
+    },
+    include: {
+      bookingItems: {
+        include: {
+          ticketCategory: true,
+        },
+      },
+      voucher: true,
+    },
   });
 };

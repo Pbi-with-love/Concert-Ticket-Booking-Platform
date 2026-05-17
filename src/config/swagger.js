@@ -16,8 +16,10 @@ const openApiSpec = {
   tags: [
     { name: "Health" },
     { name: "Bookings" },
+    { name: "Payments" },
     { name: "Concerts" },
     { name: "Admin Concerts" },
+    { name: "Admin Ticket Categories" },
   ],
   paths: {
     "/health": {
@@ -129,6 +131,47 @@ const openApiSpec = {
         },
       },
     },
+    "/api/payments/url": {
+      post: {
+        tags: ["Payments"],
+        summary: "Create payment URL",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/CreatePaymentUrlRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "Payment URL created successfully",
+          },
+        },
+      },
+    },
+    "/api/payments/{id}/mock-success": {
+      post: {
+        tags: ["Payments"],
+        summary: "Mock payment success",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "Payment id",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Payment marked as successful",
+          },
+        },
+      },
+    },
     "/api/concerts": {
       get: {
         tags: ["Concerts"],
@@ -199,6 +242,108 @@ const openApiSpec = {
         },
       },
     },
+    "/api/admin/ticket-categories": {
+      get: {
+        tags: ["Admin Ticket Categories"],
+        summary: "Get all ticket categories",
+        parameters: [
+          {
+            name: "concertId",
+            in: "query",
+            required: false,
+            schema: { type: "string" },
+            description: "Filter ticket categories by concert id",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Ticket categories fetched successfully",
+          },
+        },
+      },
+      post: {
+        tags: ["Admin Ticket Categories"],
+        summary: "Create ticket category",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/CreateTicketCategoryRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "Ticket category created successfully",
+          },
+        }
+      },
+    },
+    "/api/admin/ticket-categories/{id}": {
+      get: {
+        tags: ["Admin Ticket Categories"],
+        summary: "Get ticket category by id",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Ticket category fetched successfully",
+          },
+        },
+      },
+      patch: {
+        tags: ["Admin Ticket Categories"],
+        summary: "Update ticket category",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/UpdateTicketCategoryRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Ticket category updated successfully",
+          },
+        },
+      },
+      delete: {
+        tags: ["Admin Ticket Categories"],
+        summary: "Delete ticket category",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Ticket category deleted successfully",
+          },
+        },
+      },
+    },
   },
   components: {
     schemas: {
@@ -251,6 +396,40 @@ const openApiSpec = {
               },
             },
           },
+        },
+      },
+      CreatePaymentUrlRequest: {
+        type: "object",
+        required: ["bookingId"],
+        properties: {
+          bookingId: { type: "string" },
+        },
+      },
+      CreateTicketCategoryRequest: {
+        type: "object",
+        required: [
+          "concertId",
+          "name",
+          "price",
+          "totalQuantity",
+          "availableQuantity",
+        ],
+        properties: {
+          concertId: { type: "string" },
+          name: { type: "string" },
+          price: { type: "number" },
+          totalQuantity: { type: "integer" },
+          availableQuantity: { type: "integer" },
+        },
+      },
+      UpdateTicketCategoryRequest: {
+        type: "object",
+        properties: {
+          concertId: { type: "string" },
+          name: { type: "string" },
+          price: { type: "number" },
+          totalQuantity: { type: "integer" },
+          availableQuantity: { type: "integer" },
         },
       },
     },

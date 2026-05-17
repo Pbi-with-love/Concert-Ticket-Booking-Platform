@@ -7,12 +7,21 @@ import {
   findTicketCategoryByIdRepository,
   updateTicketCategoryRepository,
 } from "./ticketCategory.repository.js";
+import { validateTicketCategoryNumbers } from "../../utils/validateTicketCategoryNumbers.js";
 
-const validateTicketCategoryNumbers = ({
-  price,
-  totalQuantity,
-  availableQuantity,
-}) => {
+export const createTicketCategoryService = async (payload) => {
+  const {
+    concertId,
+    name,
+    price,
+    totalQuantity,
+    availableQuantity,
+  } = payload;
+
+  if (!concertId || !name) {
+    throw new AppError("concertId and name are required", 400);
+  }
+
   if (price === undefined || Number(price) < 0) {
     throw new AppError("price must be greater than or equal to 0", 400);
   }
@@ -28,26 +37,6 @@ const validateTicketCategoryNumbers = ({
   if (availableQuantity > totalQuantity) {
     throw new AppError("availableQuantity cannot exceed totalQuantity", 400);
   }
-};
-
-export const createTicketCategoryService = async (payload) => {
-  const {
-    concertId,
-    name,
-    price,
-    totalQuantity,
-    availableQuantity,
-  } = payload;
-
-  if (!concertId || !name) {
-    throw new AppError("concertId and name are required", 400);
-  }
-
-  validateTicketCategoryNumbers({
-    price,
-    totalQuantity,
-    availableQuantity,
-  });
 
   const concert = await findConcertByIdForTicketCategoryRepository(concertId);
 

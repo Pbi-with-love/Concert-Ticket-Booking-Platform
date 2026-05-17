@@ -84,3 +84,35 @@ export const findConcertByIdRepository = async (concertId) => {
     },
   });
 };
+
+export const findConcertByIdForAdminRepository = async (concertId) => {
+  return prisma.concert.findUnique({
+    where: {
+      id: concertId,
+    },
+    include: {
+      ticketCategories: true,
+      bookings: true,
+    },
+  });
+};
+
+export const updateConcertRepository = async (concertId, data) => {
+  return prisma.concert.update({
+    where: {
+      id: concertId,
+    },
+    data,
+    include: {
+      ticketCategories: true,
+    },
+  });
+};
+
+export const deleteConcertRepository = async (concertId) => {
+  return prisma.concert.delete({
+    where: {
+      id: concertId,
+    },
+  });
+};

@@ -1,7 +1,7 @@
 {
   "info": {
     "_postman_id": "a4a4f35e-2f8f-4b89-b580-a8b6481b6d3d",
-    "name": "Booking Manual Check",
+    "name": "Concert Booking API Manual Check",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -18,7 +18,7 @@
       "value": "REPLACE_TICKET_CATEGORY_ID"
     },
     {
-      "key": "voucherCode",
+      "key": "bookingId",
       "value": ""
     },
     {
@@ -26,8 +26,16 @@
       "value": ""
     },
     {
-      "key": "bookingId",
+      "key": "paymentId",
       "value": ""
+    },
+    {
+      "key": "voucherCode",
+      "value": ""
+    },
+    {
+      "key": "customerEmail",
+      "value": "john@example.com"
     },
     {
       "key": "idempotencyKey",
@@ -36,73 +44,556 @@
   ],
   "item": [
     {
-      "name": "Create Booking",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"customerEmail\": \"john@example.com\",\n  \"customerName\": \"John Doe\",\n  \"customerPhone\": \"0123456789\",\n  \"concertId\": \"{{concertId}}\",\n  \"voucherCode\": \"{{voucherCode}}\",\n  \"idempotencyKey\": \"{{idempotencyKey}}\",\n  \"items\": [\n    {\n      \"ticketCategoryId\": \"{{ticketCategoryId}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "response": []
         },
-        "url": {
-          "raw": "{{baseUrl}}/api/bookings",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "bookings"
-          ]
-        },
-        "description": "Create a new booking. After a successful response, copy `data.id` into the `bookingId` variable and `data.bookingCode` into the `bookingCode` variable for testing the GET APIs."
-      },
-      "response": []
+        {
+          "name": "Swagger Docs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api-docs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api-docs"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     },
     {
-      "name": "Get Booking By Code",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/api/bookings/code/{{bookingCode}}",
-          "host": [
-            "{{baseUrl}}"
+      "name": "Admin Concerts",
+      "item": [
+        {
+          "name": "Create Concert",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data?.id) pm.collectionVariables.set('concertId', json.data.id);",
+                  "if (json.data?.ticketCategories?.[0]?.id) pm.collectionVariables.set('ticketCategoryId', json.data.ticketCategories[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
           ],
-          "path": [
-            "api",
-            "bookings",
-            "code",
-            "{{bookingCode}}"
-          ]
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Taylor Live in HCMC\",\n  \"venue\": \"SECC\",\n  \"startTime\": \"2026-06-01T19:30:00.000Z\",\n  \"status\": \"PUBLISHED\",\n  \"ticketCategories\": [\n    {\n      \"name\": \"VIP\",\n      \"price\": 1500000,\n      \"totalQuantity\": 100,\n      \"availableQuantity\": 100\n    },\n    {\n      \"name\": \"Standard\",\n      \"price\": 800000,\n      \"totalQuantity\": 300,\n      \"availableQuantity\": 300\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/concerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "concerts"
+              ]
+            }
+          },
+          "response": []
         },
-        "description": "Retrieve a booking using the booking code."
-      },
-      "response": []
+        {
+          "name": "Update Concert",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Taylor Live in HCMC - Updated\",\n  \"venue\": \"SECC District 7\",\n  \"status\": \"PUBLISHED\",\n  \"startTime\": \"2026-06-01T20:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/concerts/{{concertId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "concerts",
+                "{{concertId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Concert",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/concerts/{{concertId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "concerts",
+                "{{concertId}}"
+              ]
+            },
+            "description": "This can fail with 409 if the concert still has ticket categories or bookings."
+          },
+          "response": []
+        }
+      ]
     },
     {
-      "name": "Get Booking By Id",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/api/bookings/{{bookingId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "bookings",
-            "{{bookingId}}"
-          ]
+      "name": "Public Concerts",
+      "item": [
+        {
+          "name": "Get All Concerts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/concerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "concerts"
+              ]
+            }
+          },
+          "response": []
         },
-        "description": "Retrieve a booking using the booking ID."
-      },
-      "response": []
+        {
+          "name": "Get Concert By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/concerts/{{concertId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "concerts",
+                "{{concertId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ticket Categories By Concert Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data?.[0]?.id) pm.collectionVariables.set('ticketCategoryId', json.data[0].id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/concerts/{{concertId}}/ticket-categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "concerts",
+                "{{concertId}}",
+                "ticket-categories"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin Ticket Categories",
+      "item": [
+        {
+          "name": "Create Ticket Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data?.id) pm.collectionVariables.set('ticketCategoryId', json.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"concertId\": \"{{concertId}}\",\n  \"name\": \"Balcony\",\n  \"price\": 500000,\n  \"totalQuantity\": 150,\n  \"availableQuantity\": 150\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/ticket-categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "ticket-categories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Ticket Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/ticket-categories?concertId={{concertId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "ticket-categories"
+              ],
+              "query": [
+                {
+                  "key": "concertId",
+                  "value": "{{concertId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ticket Category By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/ticket-categories/{{ticketCategoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "ticket-categories",
+                "{{ticketCategoryId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Ticket Category",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Balcony Updated\",\n  \"price\": 550000,\n  \"totalQuantity\": 150,\n  \"availableQuantity\": 150\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/ticket-categories/{{ticketCategoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "ticket-categories",
+                "{{ticketCategoryId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Ticket Category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/ticket-categories/{{ticketCategoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "ticket-categories",
+                "{{ticketCategoryId}}"
+              ]
+            },
+            "description": "This can fail with 409 if the ticket category has bookings or attendees."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Create Booking",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('idempotencyKey', `booking-manual-check-${Date.now()}`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data?.id) pm.collectionVariables.set('bookingId', json.data.id);",
+                  "if (json.data?.bookingCode) pm.collectionVariables.set('bookingCode', json.data.bookingCode);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerEmail\": \"{{customerEmail}}\",\n  \"customerName\": \"John Doe\",\n  \"customerPhone\": \"0123456789\",\n  \"concertId\": \"{{concertId}}\",\n  \"voucherCode\": \"{{voucherCode}}\",\n  \"idempotencyKey\": \"{{idempotencyKey}}\",\n  \"items\": [\n    {\n      \"ticketCategoryId\": \"{{ticketCategoryId}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Booking By Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/code/{{bookingCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "code",
+                "{{bookingCode}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Bookings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/me?customerEmail={{customerEmail}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "me"
+              ],
+              "query": [
+                {
+                  "key": "customerEmail",
+                  "value": "{{customerEmail}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Booking By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "{{bookingId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/cancel/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "cancel",
+                "{{bookingId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Payment URL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data?.paymentId) pm.collectionVariables.set('paymentId', json.data.paymentId);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"{{bookingId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/url",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "url"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mock Payment Success",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/{{paymentId}}/mock-success",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "{{paymentId}}",
+                "mock-success"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

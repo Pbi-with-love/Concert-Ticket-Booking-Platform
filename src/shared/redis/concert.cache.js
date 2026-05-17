@@ -124,3 +124,19 @@ export const getTicketCategoriesByConcertIdCache = async (concertId) => {
 export const invalidateAllConcertsCache = async () => {
   await redis.del(redisKeys.allConcerts());
 };
+
+export const invalidateConcertCache = async (concertId) => {
+  await redis.del(redisKeys.allConcerts());
+
+  await redis.del(redisKeys.concertById(concertId));
+
+  await redis.del(
+    redisKeys.ticketCategoriesByConcertId(concertId),
+  );
+};
+
+export const invalidateTicketCategoriesByConcertIdCache = async (concertId) => {
+  await redis.del(
+    redisKeys.ticketCategoriesByConcertId(concertId),
+  );
+}

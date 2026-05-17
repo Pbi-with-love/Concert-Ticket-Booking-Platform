@@ -1,18 +1,26 @@
+import prisma from "../../config/prisma.js";
 import AppError from "../../utils/AppError.js";
 import { generateBookingCode } from "../../utils/generateBookingCode.js";
 import { toBookingDTO } from "../../utils/bookingDTO.js";
 import {
+  invalidateBookingCache,
   getBookingByCodeCache,
   getBookingByIdCache,
 } from "./../../shared/redis/booking.cache.js";
 import {
   createBookingTransactionRepository,
+  decrementVoucherUsedCountIfPositiveRepository,
   findBookingByIdempotencyKeyRepository,
   findConcertByIdRepository,
+  findBookingByIdWithDetailsRepository,
   findMyBookingsRepository,
+  findBookingByIdForCancelRepository,
   findTicketCategoriesByConcertRepository,
   findVoucherByCodeRepository,
+  incrementTicketCategoryAvailableQuantityRepository,
+  markBookingCancelledIfNotCancelledRepository,
 } from "./booking.repository.js";
+import {invalidateTicketCategoriesByConcertIdCache} from "../../shared/redis/concert.cache.js";
 /**
  * Create a booking
  *
@@ -168,6 +176,8 @@ export const createBookingService = async (payload) => {
     voucher,
   });
 
+  await invalidateTicketCategoriesByConcertIdCache(concertId);
+
   return toBookingDTO(booking);
 };
 
@@ -196,82 +206,81 @@ export const getMyBookingsService = async (customerEmail) => {
   return bookings;
 };
 
-export const cancelBookingService = async (bookingId) => {
-  return prisma.$transaction(async (tx) => {
-    const booking = await tx.booking.findUnique({
-      where: { id: bookingId },
-      include: {
-        bookingItems: {
-          include: {
-            ticketCategory: true,
-          },
-        },
-        voucher: true,
-      },
-    });
+// Allowstatus is an optional parameter to specify if user use this service only 
+// Limitation for admin, admin can cancel any booking regardless of status but the payment method is still mocking so still cant refund to user if a success booking is cancel, 
+// but user can only cancel pending booking. 
+// So when user call this service, we will pass allowedStatuses: ["PENDING"], but when admin call this service, we will not pass allowedStatuses, so it will allow cancelling booking in any status except already cancelled.
+export const cancelBookingService = async (bookingId, options = {}) => {
+  const { allowedStatuses } = options;
+
+  const result = await prisma.$transaction(async (tx) => {
+    const booking = await findBookingByIdForCancelRepository(tx, bookingId);
 
     if (!booking) {
       throw new AppError("Booking not found", 404);
     }
 
-    if (booking.status === "CANCELLED") {
-      return booking;
+    if (allowedStatuses && !allowedStatuses.includes(booking.status)) {
+      throw new AppError("Booking cannot be cancelled in current status", 400);
     }
 
-    const updated = await tx.booking.updateMany({
-      where: {
-        id: bookingId,
-        status: {
-          not: "CANCELLED",
-        },
-      },
-      data: {
-        status: "CANCELLED",
-        cancelledAt: new Date(),
-      },
-    });
+    if (booking.status === "CANCELLED") {
+      return {
+        booking,
+        cancelled: false,
+      };
+    }
+
+    const updated = await markBookingCancelledIfNotCancelledRepository(
+      tx,
+      bookingId,
+    );
 
     if (updated.count === 0) {
-      // Another request has already cancelled this booking.
-      // Return the current booking state without refunding tickets/voucher again.
-      return tx.booking.findUnique({
-        where: { id: bookingId },
-        include: {
-          bookingItems: true,
-          voucher: true,
-        },
-      });
+      const currentBooking = await findBookingByIdWithDetailsRepository(
+        tx,
+        bookingId,
+      );
+
+      return {
+        booking: currentBooking,
+        cancelled: false,
+      };
     }
 
     for (const item of booking.bookingItems) {
-      await tx.ticketCategory.update({
-        where: {
-          id: item.ticketCategoryId,
-        },
-        data: {
-          availableQuantity: {
-            increment: item.quantity,
-          },
-        },
-      });
+      await incrementTicketCategoryAvailableQuantityRepository(
+        tx,
+        item.ticketCategoryId,
+        item.quantity,
+      );
     }
 
     if (booking.voucherId) {
-      await tx.voucher.updateMany({
-        where: {
-          id: booking.voucherId,
-          usedCount: { gt: 0 },
-        },
-        data: {
-          usedCount: { decrement: 1 },
-        },
-      });
+      await decrementVoucherUsedCountIfPositiveRepository(tx, booking.voucherId);
     }
 
-    return toBookingDTO({
-      ...booking,
-      status: "CANCELLED",
-      cancelledAt: new Date(),
-    });
+    const cancelledBooking = await findBookingByIdWithDetailsRepository(
+      tx,
+      bookingId,
+    );
+
+    return {
+      booking: cancelledBooking,
+      cancelled: true,
+    };
   });
+
+  if (result.cancelled) {
+    await invalidateBookingCache({
+      bookingId: result.booking.id,
+      bookingCode: result.booking.bookingCode,
+    });
+
+    // Invalidate ticket category cache for the concert to reflect the updated available quantity
+    await invalidateTicketCategoriesByConcertIdCache(result.booking.concertId);
+  }
+
+
+  return toBookingDTO(result.booking);
 };

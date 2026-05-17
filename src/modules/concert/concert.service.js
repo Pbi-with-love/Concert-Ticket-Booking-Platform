@@ -1,9 +1,16 @@
 import AppError from "../../utils/AppError.js";
-import { createConcertRepository } from "./concert.repository.js";
+import {
+  createConcertRepository,
+  deleteConcertRepository,
+  findConcertByIdForAdminRepository,
+  updateConcertRepository,
+} from "./concert.repository.js";
 import {
   getAllConcertsCache,
   getConcertByIdCache,
-  getTicketCategoriesByConcertIdCache
+  getTicketCategoriesByConcertIdCache,
+  invalidateAllConcertsCache,
+  invalidateConcertCache
 } from "../../shared/redis/concert.cache.js";
 
 export const createConcertService = async (payload) => {
@@ -88,6 +95,8 @@ export const createConcertService = async (payload) => {
     ticketCategories: normalizedTicketCategories,
   });
 
+  await invalidateAllConcertsCache();
+
   return concert;
 };
 
@@ -114,4 +123,76 @@ export const getTicketCategoriesByConcertIdService = async (concertId) => {
   }
 
   return ticketCategories;
+};
+
+export const updateConcertService = async (concertId, payload) => {
+  const concert = await findConcertByIdForAdminRepository(concertId);
+
+  if (!concert) {
+    throw new AppError("Concert not found", 404);
+  }
+
+  const data = {};
+
+  if (payload.name !== undefined) {
+    if (!payload.name) {
+      throw new AppError("name cannot be empty", 400);
+    }
+
+    data.name = payload.name;
+  }
+
+  if (payload.venue !== undefined) {
+    if (!payload.venue) {
+      throw new AppError("venue cannot be empty", 400);
+    }
+
+    data.venue = payload.venue;
+  }
+
+  if (payload.status !== undefined) {
+    if (!payload.status) {
+      throw new AppError("status cannot be empty", 400);
+    }
+
+    data.status = payload.status;
+  }
+
+  if (payload.startTime !== undefined) {
+    const parsedStartTime = new Date(payload.startTime);
+
+    if (Number.isNaN(parsedStartTime.getTime())) {
+      throw new AppError("startTime must be a valid datetime", 400);
+    }
+
+    data.startTime = parsedStartTime;
+  }
+
+  const updatedConcert = await updateConcertRepository(concertId, data);
+
+  await invalidateConcertCache(concertId);
+
+  return updatedConcert;
+};
+
+export const deleteConcertService = async (concertId) => {
+  const concert = await findConcertByIdForAdminRepository(concertId);
+
+  if (!concert) {
+    throw new AppError("Concert not found", 404);
+  }
+
+  if (concert.bookings.length > 0) {
+    throw new AppError("Cannot delete concert that already has bookings", 409);
+  }
+
+  if (concert.ticketCategories.length > 0) {
+    throw new AppError(
+      "Cannot delete concert that still has ticket categories",
+      409,
+    );
+  }
+
+  await deleteConcertRepository(concertId);
+  await invalidateConcertCache(concertId);
 };

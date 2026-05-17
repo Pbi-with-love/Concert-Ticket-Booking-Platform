@@ -2,8 +2,10 @@ import express from "express";
 import { swaggerServe, swaggerSetup } from "./config/swagger.js";
 import errorHandler from "./middlewares/errorHandlers.js";
 import bookingRouter from "./modules/booking/booking.route.js";
+import bookingAdminRouter from "./modules/booking/booking.admin.route.js";
 import concertAdminRouter from "./modules/concert/concert.admin.route.js";
 import concertRouter from "./modules/concert/concert.route.js";
+import paymentRouter from "./modules/payment/payment.route.js";
 import ticketCategoryAdminRouter from "./modules/ticket-category/ticketCategory.admin.route.js";
 
 const app = express();
@@ -16,6 +18,8 @@ app.get("/health", (req, res) => {
 
 app.use("/api-docs", swaggerServe, swaggerSetup);
 app.use("/api/bookings", bookingRouter);
+app.use("/api/admin/bookings", bookingAdminRouter);
+app.use("/api/payments", paymentRouter);
 app.use("/api/admin/concerts", concertAdminRouter);
 app.use("/api/admin/ticket-categories", ticketCategoryAdminRouter);
 app.use("/api/concerts", concertRouter);

@@ -57,10 +57,12 @@ export const getBookingByIdController = async (req, res, next) => {
   }
 };
 
-export const cancelBooking = async (req, res, next) => {
+// Admin controller for cancelling a booking and user controller for cancelling their own booking.
+export const cancelBookingController = async (req, res, next) => {
   try {
-    const booking = await cancelBookingService(req.params.id);
-
+    const booking = await cancelBookingService(req.params.id, {
+      allowedStatuses: ["PENDING"],
+    });
     res.status(200).json({
       message: "Booking cancelled successfully",
       data: booking,

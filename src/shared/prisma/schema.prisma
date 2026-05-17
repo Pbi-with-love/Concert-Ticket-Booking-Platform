@@ -106,6 +106,7 @@ model Payment {
   provider        String
   transactionId   String   @unique
   amount          Decimal
+  // PENDING | SUCCESS | FAILED
   status          String
 
   createdAt       DateTime @default(now())
