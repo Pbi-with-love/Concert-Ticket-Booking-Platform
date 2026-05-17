@@ -1,23 +1,71 @@
-export const createBooking = async (req, res, next) => {
-    try {
+import { withIdempotency } from "../../shared/redis/idempotency.cache.js";
+import {
+  cancelBookingService,
+  getBookingByCodeService,
+  getBookingByIdService,
+  getMyBookingsService,
+} from "./booking.service.js";
 
-    } catch (error) {
-        next(error);
-    }
-} 
+export const createBookingController = async (req, res, next) => {
+  try {
+    const booking = await withIdempotency(req.body.idempotencyKey, req.body);
+    res.status(201).json({
+      message: "Booking created successfully",
+      data: booking,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
-export const getBookingByCode = async (req, res, next) => {
+export const getBookingByCodeController = async (req, res, next) => {
+  try {
+    const booking = await getBookingByCodeService(req.params.bookingCode);
+    res.status(200).json({
+      message: "Booking fetched successfully",
+      data: booking,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
-}
+export const getMyBookingsController = async (req, res, next) => {
+  try {
+    // Req.user is set by auth middleware, but we also allow customerEmail as query param for flexibility
+    const customerEmail = req.user?.email || req.query.customerEmail;
+    const bookings = await getMyBookingsService(customerEmail);
 
-export const getMyBookings = async (req, res, next) => {
+    res.status(200).json({
+      message: "Bookings fetched successfully",
+      data: bookings,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
-}
-
-export const getBookingById = async (req, res, next) => {
-
-}
+export const getBookingByIdController = async (req, res, next) => {
+  try {
+    const booking = await getBookingByIdService(req.params.id);
+    res.status(200).json({
+      message: "Booking fetched successfully",
+      data: booking,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const cancelBooking = async (req, res, next) => {
+  try {
+    const booking = await cancelBookingService(req.params.id);
 
-}
+    res.status(200).json({
+      message: "Booking cancelled successfully",
+      data: booking,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

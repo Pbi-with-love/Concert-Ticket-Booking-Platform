@@ -1,7 +1,7 @@
 import redis from "../../config/redis.js";
 import { redisKeys } from "../../utils/redisKey.js";
 import AppError from "../../utils/AppError.js";
-import { createBooking } from "../../modules/booking/booking.service.js";
+import { createBookingService } from "../../modules/booking/booking.service.js";
 
 
 export const withIdempotency = async (idempotencyKey, payload) => {
@@ -18,7 +18,7 @@ export const withIdempotency = async (idempotencyKey, payload) => {
   }
 
   try {
-    const booking = await createBooking(payload);
+    const booking = await createBookingService(payload);
 
     await redis.set(
       resultKey,

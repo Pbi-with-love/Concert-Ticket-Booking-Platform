@@ -15,6 +15,9 @@ model Concert {
 
   ticketCategories TicketCategory[]
   bookings         Booking[]
+
+  @@index([startTime, id])
+  @@index([status, startTime])
 }
 
 model TicketCategory {
@@ -28,6 +31,8 @@ model TicketCategory {
   concert        Concert       @relation(fields: [concertId], references: [id])
   bookingItems   BookingItem[]
   attendees      Attendee[]
+
+  @@index([concertId, name])
 }
 
 model Voucher {
@@ -49,11 +54,11 @@ model Voucher {
 model Booking {
   id                String   @id @default(uuid())
   bookingCode       String   @unique
-  customerEmail     String   @index
-  customerName  String
-  customerPhone String
+  customerEmail     String
+  customerName      String
+  customerPhone     String
 
-  concertId         String   @index
+  concertId         String
   voucherId         String?
 
   // PENDING | CONFIRMED | CANCELLED | EXPIRED
@@ -71,22 +76,27 @@ model Booking {
 
   bookingItems      BookingItem[]
   payments          Payment[]
+
+  @@index([customerEmail])
+  @@index([concertId])
 }
 
 model BookingItem {
   id                String   @id @default(uuid())
-  bookingId         String   @index  
-  ticketCategoryId  String   @index
+  bookingId         String
+  ticketCategoryId  String
 
   quantity          Int
   unitPrice         Decimal
   lineTotal         Decimal
-  discountAmount    Decimal  @default(0)
 
   booking           Booking         @relation(fields: [bookingId], references: [id])
   ticketCategory    TicketCategory  @relation(fields: [ticketCategoryId], references: [id])
 
   attendees         Attendee[]
+
+  @@index([bookingId])
+  @@index([ticketCategoryId])
 }
 
 model Payment {

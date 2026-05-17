@@ -1,7 +1,18 @@
-import prisma from "../../config/prisma.js";
 import AppError from "../../utils/AppError.js";
 import { generateBookingCode } from "../../utils/generateBookingCode.js";
-
+import { toBookingDTO } from "../../utils/bookingDTO.js";
+import {
+  getBookingByCodeCache,
+  getBookingByIdCache,
+} from "./../../shared/redis/booking.cache.js";
+import {
+  createBookingTransactionRepository,
+  findBookingByIdempotencyKeyRepository,
+  findConcertByIdRepository,
+  findMyBookingsRepository,
+  findTicketCategoriesByConcertRepository,
+  findVoucherByCodeRepository,
+} from "./booking.repository.js";
 /**
  * Create a booking
  *
@@ -47,26 +58,16 @@ export const createBookingService = async (payload) => {
     throw new AppError("Booking items are required", 400);
   }
 
-  const existingBooking = await prisma.booking.findUnique({
-    where: {
-      idempotencyKey,
-    },
-    include: {
-      bookingItems: true,
-      payments: true,
-    },
-  });
+  // Although already implement idempotency in redis, but in DB is more trustworthy
+  const existingBooking =
+    await findBookingByIdempotencyKeyRepository(idempotencyKey);
 
   // If a booking with the same idempotency key exists, return it instead of creating a new one
   if (existingBooking) {
-    return existingBooking;
+    return toBookingDTO(existingBooking);
   }
 
-  const concert = await prisma.concert.findUnique({
-    where: {
-      id: concertId,
-    },
-  });
+  const concert = await findConcertByIdRepository(concertId);
 
   if (!concert) {
     throw new AppError("Concert not found", 404);
@@ -75,14 +76,10 @@ export const createBookingService = async (payload) => {
   const ticketCategoryIds = items.map((item) => item.ticketCategoryId);
 
   // Validate ticket categories
-  const ticketCategories = await prisma.ticketCategory.findMany({
-    where: {
-      id: {
-        in: ticketCategoryIds,
-      },
-      concertId,
-    },
-  });
+  const ticketCategories = await findTicketCategoriesByConcertRepository(
+    ticketCategoryIds,
+    concertId,
+  );
 
   if (ticketCategories.length !== ticketCategoryIds.length) {
     throw new AppError("One or more ticket categories are invalid", 400);
@@ -116,11 +113,7 @@ export const createBookingService = async (payload) => {
   let discountAmount = 0;
 
   if (voucherCode) {
-    voucher = await prisma.voucher.findUnique({
-      where: {
-        code: voucherCode,
-      },
-    });
+    voucher = await findVoucherByCodeRepository(voucherCode);
 
     if (!voucher) {
       throw new AppError("Voucher not found", 404);
@@ -158,99 +151,55 @@ export const createBookingService = async (payload) => {
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
   // Database transaction
-  const booking = await prisma.$transaction(async (tx) => {
-    // Create booking
-    const createdBooking = await tx.booking.create({
-      data: {
-        bookingCode: generateBookingCode(),
-        customerEmail,
-        customerName,
-        customerPhone,
-        concertId,
-        voucherId: voucher?.id,
-        status: "PENDING",
-        subtotal,
-        discountAmount,
-        finalAmount,
-        idempotencyKey,
-        expiresAt,
-      },
-    });
+  const booking = await createBookingTransactionRepository({
+    bookingCode: generateBookingCode(),
+    customerEmail,
+    customerName,
+    customerPhone,
+    concertId,
+    voucherId: voucher?.id,
+    subtotal,
+    discountAmount,
+    finalAmount,
+    idempotencyKey,
+    expiresAt,
+    items,
+    ticketCategoryMap,
+    voucher,
+  });
 
-    // Create booking items + update stock safely by using atomic operations in the same transaction
-    const bookingItemsData = [];
-    for (const item of items) {
-      const ticketCategory = ticketCategories.get(item.ticketCategoryId);
+  return toBookingDTO(booking);
+};
 
-      if (!ticketCategory) {
-        throw new AppError(
-          `Ticket category not found: ${item.ticketCategoryId}`,
-          404,
-        );
-      }
+export const getBookingByCodeService = async (bookingCode) => {
+  const booking = await getBookingByCodeCache(bookingCode);
 
-      if (item.quantity <= 0) {
-        throw new AppError("Quantity must be greater than 0", 400);
-      }
+  if (!booking) {
+    throw new AppError("Booking not found", 404);
+  }
 
-      // 2. Atomic stock update (anti oversell)
-      const updated = await tx.ticketCategory.updateMany({
-        where: {
-          id: item.ticketCategoryId,
-          availableQuantity: {
-            gte: item.quantity,
-          },
-        },
-        data: {
-          availableQuantity: {
-            decrement: item.quantity,
-          },
-        },
-      });
+  return booking;
+};
 
-      if (updated.count === 0) {
-        throw new AppError(
-          `Not enough tickets for category ${ticketCategory.name}`,
-          409,
-        );
-      }
+export const getBookingByIdService = async (bookingId) => {
+  const booking = await getBookingByIdCache(bookingId);
 
-      const unitPrice = Number(ticketCategory.price);
-      const lineTotal = unitPrice * item.quantity;
+  if (!booking) {
+    throw new AppError("Booking not found", 404);
+  }
 
-      bookingItemsData.push({
-        bookingId: createdBooking.id,
-        ticketCategoryId: item.ticketCategoryId,
-        quantity: item.quantity,
-        unitPrice,
-        lineTotal,
-        discountAmount: 0,
-      });
-    }
+  return booking;
+};
 
-    await tx.bookingItem.createMany({
-      data: bookingItemsData,
-    });
+export const getMyBookingsService = async (customerEmail) => {
+  const bookings = await findMyBookingsRepository(customerEmail);
+  return bookings;
+};
 
-    // Increase voucher usage
-    if (voucher) {
-      await tx.voucher.update({
-        where: {
-          id: voucher.id,
-        },
-        data: {
-          usedCount: {
-            increment: 1,
-          },
-        },
-      });
-    }
-
-    // Return full booking
-    return tx.booking.findUnique({
-      where: {
-        id: createdBooking.id,
-      },
+export const cancelBookingService = async (bookingId) => {
+  return prisma.$transaction(async (tx) => {
+    const booking = await tx.booking.findUnique({
+      where: { id: bookingId },
       include: {
         bookingItems: {
           include: {
@@ -260,11 +209,69 @@ export const createBookingService = async (payload) => {
         voucher: true,
       },
     });
+
+    if (!booking) {
+      throw new AppError("Booking not found", 404);
+    }
+
+    if (booking.status === "CANCELLED") {
+      return booking;
+    }
+
+    const updated = await tx.booking.updateMany({
+      where: {
+        id: bookingId,
+        status: {
+          not: "CANCELLED",
+        },
+      },
+      data: {
+        status: "CANCELLED",
+        cancelledAt: new Date(),
+      },
+    });
+
+    if (updated.count === 0) {
+      // Another request has already cancelled this booking.
+      // Return the current booking state without refunding tickets/voucher again.
+      return tx.booking.findUnique({
+        where: { id: bookingId },
+        include: {
+          bookingItems: true,
+          voucher: true,
+        },
+      });
+    }
+
+    for (const item of booking.bookingItems) {
+      await tx.ticketCategory.update({
+        where: {
+          id: item.ticketCategoryId,
+        },
+        data: {
+          availableQuantity: {
+            increment: item.quantity,
+          },
+        },
+      });
+    }
+
+    if (booking.voucherId) {
+      await tx.voucher.updateMany({
+        where: {
+          id: booking.voucherId,
+          usedCount: { gt: 0 },
+        },
+        data: {
+          usedCount: { decrement: 1 },
+        },
+      });
+    }
+
+    return toBookingDTO({
+      ...booking,
+      status: "CANCELLED",
+      cancelledAt: new Date(),
+    });
   });
-
-  return booking;
-};
-
-export const getBookingByCode = async (bookingCode) => {
-
 };

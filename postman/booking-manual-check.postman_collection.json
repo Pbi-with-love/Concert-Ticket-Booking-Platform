@@ -1,0 +1,108 @@
+{
+  "info": {
+    "_postman_id": "a4a4f35e-2f8f-4b89-b580-a8b6481b6d3d",
+    "name": "Booking Manual Check",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "concertId",
+      "value": "REPLACE_CONCERT_ID"
+    },
+    {
+      "key": "ticketCategoryId",
+      "value": "REPLACE_TICKET_CATEGORY_ID"
+    },
+    {
+      "key": "voucherCode",
+      "value": ""
+    },
+    {
+      "key": "bookingCode",
+      "value": ""
+    },
+    {
+      "key": "bookingId",
+      "value": ""
+    },
+    {
+      "key": "idempotencyKey",
+      "value": "booking-manual-check-001"
+    }
+  ],
+  "item": [
+    {
+      "name": "Create Booking",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerEmail\": \"john@example.com\",\n  \"customerName\": \"John Doe\",\n  \"customerPhone\": \"0123456789\",\n  \"concertId\": \"{{concertId}}\",\n  \"voucherCode\": \"{{voucherCode}}\",\n  \"idempotencyKey\": \"{{idempotencyKey}}\",\n  \"items\": [\n    {\n      \"ticketCategoryId\": \"{{ticketCategoryId}}\",\n      \"quantity\": 1\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/bookings",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "bookings"
+          ]
+        },
+        "description": "Create a new booking. After a successful response, copy `data.id` into the `bookingId` variable and `data.bookingCode` into the `bookingCode` variable for testing the GET APIs."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Booking By Code",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/bookings/code/{{bookingCode}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "bookings",
+            "code",
+            "{{bookingCode}}"
+          ]
+        },
+        "description": "Retrieve a booking using the booking code."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Booking By Id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/bookings/{{bookingId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "bookings",
+            "{{bookingId}}"
+          ]
+        },
+        "description": "Retrieve a booking using the booking ID."
+      },
+      "response": []
+    }
+  ]
+}
