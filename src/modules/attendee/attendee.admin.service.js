@@ -9,9 +9,6 @@ import {
 export const getAttendeesByBookingIdService = async (bookingId) => {
   const attendees = await findAttendeesByBookingIdRepository(bookingId);
 
-  if (!attendees) {
-    throw new AppError("Attendee not found", 404);
-  }
   return attendees;
 };
 

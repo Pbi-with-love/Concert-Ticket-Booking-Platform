@@ -244,16 +244,7 @@ export const findBookingByIdRepository = async (tx, bookingId) => {
   });
 };
 
-const bookingAdminInclude = {
-  concert: true,
-  voucher: true,
-  bookingItems: {
-    include: {
-      ticketCategory: true,
-    },
-  },
-  payments: true,
-};
+
 
 /**
  * Filter is a full obj (status, concertId, customerEmail).

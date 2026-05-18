@@ -49,6 +49,8 @@ model Voucher {
   isActive       Boolean  @default(true)
 
   bookings       Booking[]
+
+  @@index([startDate, code])
 }
 
 model Booking {
@@ -77,6 +79,7 @@ model Booking {
   bookingItems      BookingItem[]
   payments          Payment[]
 
+  @@index([createdAt])
   @@index([customerEmail])
   @@index([concertId])
 }
