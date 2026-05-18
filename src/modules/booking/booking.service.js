@@ -10,17 +10,21 @@ import {
 import {
   createBookingTransactionRepository,
   decrementVoucherUsedCountIfPositiveRepository,
+  findAllBookingsRepository,
+  findBookingByIdAdminRepository,
   findBookingByIdempotencyKeyRepository,
+  findBookingByIdRepository,
   findConcertByIdRepository,
-  findBookingByIdWithDetailsRepository,
   findMyBookingsRepository,
-  findBookingByIdForCancelRepository,
   findTicketCategoriesByConcertRepository,
   findVoucherByCodeRepository,
   incrementTicketCategoryAvailableQuantityRepository,
   markBookingCancelledIfNotCancelledRepository,
+  updateBookingStatusAdminRepository,
+  updateBookingCustomerInfoAdminRepository,
 } from "./booking.repository.js";
-import {invalidateTicketCategoriesByConcertIdCache} from "../../shared/redis/concert.cache.js";
+import { invalidateTicketCategoriesByConcertIdCache } from "../../shared/redis/concert.cache.js";
+
 /**
  * Create a booking
  *
@@ -206,15 +210,15 @@ export const getMyBookingsService = async (customerEmail) => {
   return bookings;
 };
 
-// Allowstatus is an optional parameter to specify if user use this service only 
-// Limitation for admin, admin can cancel any booking regardless of status but the payment method is still mocking so still cant refund to user if a success booking is cancel, 
-// but user can only cancel pending booking. 
+// Allowstatus is an optional parameter to specify if user use this service only to cancel pending booking
+// Limitation for admin, admin can cancel ["PENDING", "CONFIRMED"] booking, but cannot cancel EXPIRED, CANCELLED booking.
+// but user can only cancel pending booking.
 // So when user call this service, we will pass allowedStatuses: ["PENDING"], but when admin call this service, we will not pass allowedStatuses, so it will allow cancelling booking in any status except already cancelled.
 export const cancelBookingService = async (bookingId, options = {}) => {
   const { allowedStatuses } = options;
 
   const result = await prisma.$transaction(async (tx) => {
-    const booking = await findBookingByIdForCancelRepository(tx, bookingId);
+    const booking = await findBookingByIdRepository(tx, bookingId);
 
     if (!booking) {
       throw new AppError("Booking not found", 404);
@@ -237,10 +241,7 @@ export const cancelBookingService = async (bookingId, options = {}) => {
     );
 
     if (updated.count === 0) {
-      const currentBooking = await findBookingByIdWithDetailsRepository(
-        tx,
-        bookingId,
-      );
+      const currentBooking = await findBookingByIdRepository(tx, bookingId);
 
       return {
         booking: currentBooking,
@@ -257,13 +258,13 @@ export const cancelBookingService = async (bookingId, options = {}) => {
     }
 
     if (booking.voucherId) {
-      await decrementVoucherUsedCountIfPositiveRepository(tx, booking.voucherId);
+      await decrementVoucherUsedCountIfPositiveRepository(
+        tx,
+        booking.voucherId,
+      );
     }
 
-    const cancelledBooking = await findBookingByIdWithDetailsRepository(
-      tx,
-      bookingId,
-    );
+    const cancelledBooking = await findBookingByIdRepository(tx, bookingId);
 
     return {
       booking: cancelledBooking,
@@ -281,6 +282,124 @@ export const cancelBookingService = async (bookingId, options = {}) => {
     await invalidateTicketCategoriesByConcertIdCache(result.booking.concertId);
   }
 
-
   return toBookingDTO(result.booking);
+};
+
+export const getAllBookingsService = async (filters = {}) => {
+  if (
+    filters.status &&
+    !["PENDING", "CONFIRMED", "CANCELLED", "EXPIRED"].includes(filters.status)
+  ) {
+    throw new AppError("Invalid booking status", 400);
+  }
+
+  const bookings = await findAllBookingsRepository(filters);
+  return bookings;
+};
+
+export const getBookingByIdAdminService = async (bookingId) => {
+  const booking = await findBookingByIdAdminRepository(bookingId);
+
+  if (!booking) {
+    throw new AppError("Booking not found", 404);
+  }
+
+  return booking;
+};
+
+/**
+ * Only admin can update booking status, and admin can update status to PENDING, CONFIRMED, CANCELLED. But cannot update status of a expired, cancel booking to pending.
+ * It is possible to update booking status from PENDING to CONFIRMED, or from CONFIRMED to CANCELLED. But it is not possible to update booking status from CANCELLED or EXPIRED to any other status, or from CONFIRMED to PENDING.
+ */
+export const updateBookingStatusAdminService = async (bookingId, status) => {
+  if (!status) {
+    throw new AppError("status is required", 400);
+  }
+
+  // Admin can update status to PENDING, CONFIRMED, CANCELLED. But cannot update status of a expired, cancel booking to pending.
+  if (!["PENDING", "CONFIRMED", "CANCELLED"].includes(status)) {
+    throw new AppError("Invalid booking status", 400);
+  }
+
+  if (status === "CANCELLED") {
+    return cancelBookingService(bookingId, {
+      // Admin can cancel PENDING, CONFIRMED booking, but cannot cancel EXPIRED, CANCELLED booking.
+      allowedStatuses: ["PENDING", "CONFIRMED"],
+    });
+  }
+
+  const existingBooking = await findBookingByIdAdminRepository(bookingId);
+
+  if (!existingBooking) {
+    throw new AppError("Booking not found", 404);
+  }
+
+  if (existingBooking.status === "CANCELLED") {
+    throw new AppError("Cannot update status of a cancelled booking", 400);
+  }
+
+  if (existingBooking.status === "EXPIRED") {
+    throw new AppError("Cannot update status of an expired booking", 400);
+  }
+
+  if (status === "PENDING" && existingBooking.status !== "PENDING") {
+    throw new AppError("Cannot move booking back to PENDING", 400);
+  }
+
+  const booking = await updateBookingStatusAdminRepository(bookingId, status);
+
+  await invalidateBookingCache({
+    bookingId: booking.id,
+    bookingCode: booking.bookingCode,
+  });
+
+  return booking;
+};
+
+export const updateBookingCustomerInfoAdminService = async (
+  bookingId,
+  payload = {},
+) => {
+  const allowedFields = ["customerName", "customerPhone", "customerEmail"];
+  const payloadFields = Object.keys(payload);
+  const invalidFields = payloadFields.filter(
+    (field) => !allowedFields.includes(field),
+  );
+
+  if (invalidFields.length > 0) {
+    throw new AppError(
+      `Only customerName, customerPhone and customerEmail can be updated`,
+      400,
+    );
+  }
+
+  const data = {};
+
+  for (const field of allowedFields) {
+    if (payload[field] !== undefined) {
+      data[field] = payload[field];
+    }
+  }
+
+  if (Object.keys(data).length === 0) {
+    throw new AppError("At least one customer field is required", 400);
+  }
+
+  const existingBooking = await findBookingByIdAdminRepository(bookingId);
+
+  if (!existingBooking) {
+    throw new AppError("Booking not found", 404);
+  }
+
+  const booking = await updateBookingCustomerInfoAdminRepository(
+    bookingId,
+    data,
+  );
+
+  await invalidateBookingCache({
+    bookingId: booking.id,
+    bookingCode: booking.bookingCode,
+  });
+
+  return booking;
 };

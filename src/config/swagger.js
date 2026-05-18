@@ -291,6 +291,118 @@ const openApiSpec = {
         },
       },
     },
+    "/api/admin/bookings": {
+      get: {
+        tags: ["Admin Bookings"],
+        summary: "Get all bookings",
+        parameters: [
+          {
+            name: "concertId",
+            in: "query",
+            required: false,
+            schema: { type: "string" },
+            description: "Filter bookings by concert id",
+          },
+          {
+            name: "status",
+            in: "query",
+            required: false,
+            schema: {
+              type: "string",
+              enum: ["PENDING", "CONFIRMED", "CANCELLED", "EXPIRED"],
+            },
+            description: "Filter bookings by status",
+          },
+          {
+            name: "customerEmail",
+            in: "query",
+            required: false,
+            schema: { type: "string", format: "email" },
+            description: "Filter bookings by customer email",
+          },
+        ],
+        responses: {
+          200: {
+            description: "Bookings fetched successfully",
+          },
+        },
+      },
+    },
+    "/api/admin/bookings/{id}": {
+      get: {
+        tags: ["Admin Bookings"],
+        summary: "Get booking by id as admin",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Booking fetched successfully",
+          },
+        },
+      },
+      patch: {
+        tags: ["Admin Bookings"],
+        summary: "Update booking customer info",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/UpdateBookingCustomerInfoRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Booking customer info updated successfully",
+          },
+        },
+      },
+    },
+    "/api/admin/bookings/{id}/status": {
+      patch: {
+        tags: ["Admin Bookings"],
+        summary: "Update booking status as admin",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/UpdateBookingStatusRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Booking status updated successfully",
+          },
+        },
+      },
+    },
     "/api/admin/bookings/cancel/{id}": {
       post: {
         tags: ["Admin Bookings"],
@@ -654,6 +766,24 @@ const openApiSpec = {
               },
             },
           },
+        },
+      },
+      UpdateBookingStatusRequest: {
+        type: "object",
+        required: ["status"],
+        properties: {
+          status: {
+            type: "string",
+            enum: ["PENDING", "CONFIRMED", "CANCELLED", "EXPIRED"],
+          },
+        },
+      },
+      UpdateBookingCustomerInfoRequest: {
+        type: "object",
+        properties: {
+          customerName: { type: "string" },
+          customerPhone: { type: "string" },
+          customerEmail: { type: "string", format: "email" },
         },
       },
       UpdateConcertRequest: {

@@ -309,6 +309,25 @@
             "method": "GET",
             "header": [],
             "url": {
+              "raw": "{{baseUrl}}/api/admin/ticket-categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "ticket-categories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ticket Categories By Concert Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
               "raw": "{{baseUrl}}/api/admin/ticket-categories?concertId={{concertId}}",
               "host": [
                 "{{baseUrl}}"
@@ -718,6 +737,137 @@
     {
       "name": "Admin Bookings",
       "item": [
+        {
+          "name": "Get All Bookings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "bookings"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Bookings By Filters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/bookings?concertId={{concertId}}&status=&customerEmail=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "concertId",
+                  "value": "{{concertId}}"
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "customerEmail",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Booking By Id Admin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/bookings/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "bookings",
+                "{{bookingId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Booking Customer Info Admin",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"John Doe Updated\",\n  \"customerPhone\": \"0987654321\",\n  \"customerEmail\": \"{{customerEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/bookings/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "bookings",
+                "{{bookingId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Booking Status Admin",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CONFIRMED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/bookings/{{bookingId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "bookings",
+                "{{bookingId}}",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
         {
           "name": "Admin Cancel Booking",
           "request": {

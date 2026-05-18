@@ -175,22 +175,6 @@ export const findMyBookingsRepository = async (customerEmail) => {
   });
 };
 
-export const findBookingByIdForCancelRepository = async (tx, bookingId) => {
-  return tx.booking.findUnique({
-    where: {
-      id: bookingId,
-    },
-    include: {
-      bookingItems: {
-        include: {
-          ticketCategory: true,
-        },
-      },
-      voucher: true,
-    },
-  });
-};
-
 export const markBookingCancelledIfNotCancelledRepository = async (
   tx,
   bookingId,
@@ -244,7 +228,7 @@ export const decrementVoucherUsedCountIfPositiveRepository = async (
   });
 };
 
-export const findBookingByIdWithDetailsRepository = async (tx, bookingId) => {
+export const findBookingByIdRepository = async (tx, bookingId) => {
   return tx.booking.findUnique({
     where: {
       id: bookingId,
@@ -256,6 +240,103 @@ export const findBookingByIdWithDetailsRepository = async (tx, bookingId) => {
         },
       },
       voucher: true,
+    },
+  });
+};
+
+const bookingAdminInclude = {
+  concert: true,
+  voucher: true,
+  bookingItems: {
+    include: {
+      ticketCategory: true,
+    },
+  },
+  payments: true,
+};
+
+/**
+ * Filter is a full obj (status, concertId, customerEmail).
+ * Therefore we can directly spread it in the where clause.
+ */
+export const findAllBookingsRepository = async (filters = {}) => {
+  return prisma.booking.findMany({
+    where: {
+      ...filters,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    include: {
+      concert: true,
+      voucher: true,
+      bookingItems: {
+        include: {
+          ticketCategory: true,
+        },
+      },
+      payments: true,
+    },
+  });
+};
+
+export const findBookingByIdAdminRepository = async (bookingId) => {
+  return prisma.booking.findUnique({
+    where: {
+      id: bookingId,
+    },
+    include: {
+      concert: true,
+      voucher: true,
+      bookingItems: {
+        include: {
+          ticketCategory: true,
+        },
+      },
+      payments: true,
+    },
+  });
+};
+
+export const updateBookingStatusAdminRepository = async (bookingId, status) => {
+  return prisma.booking.update({
+    where: {
+      id: bookingId,
+    },
+    data: {
+      status,
+    },
+    include: {
+      concert: true,
+      voucher: true,
+      bookingItems: {
+        include: {
+          ticketCategory: true,
+        },
+      },
+      payments: true,
+    },
+  });
+};
+
+export const updateBookingCustomerInfoAdminRepository = async (
+  bookingId,
+  data,
+) => {
+  return prisma.booking.update({
+    where: {
+      id: bookingId,
+    },
+    data,
+    include: {
+      concert: true,
+      voucher: true,
+      bookingItems: {
+        include: {
+          ticketCategory: true,
+        },
+      },
+      payments: true,
     },
   });
 };
