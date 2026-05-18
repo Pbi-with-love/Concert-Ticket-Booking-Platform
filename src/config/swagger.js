@@ -20,6 +20,8 @@ const openApiSpec = {
     { name: "Concerts" },
     { name: "Admin Concerts" },
     { name: "Admin Ticket Categories" },
+    { name: "Admin Bookings" },
+    { name: "Admin Attendees" },
   ],
   paths: {
     "/health": {
@@ -242,6 +244,130 @@ const openApiSpec = {
         },
       },
     },
+    "/api/admin/concerts/{id}": {
+      patch: {
+        tags: ["Admin Concerts"],
+        summary: "Update concert",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/UpdateConcertRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Concert updated successfully",
+          },
+        },
+      },
+      delete: {
+        tags: ["Admin Concerts"],
+        summary: "Delete concert",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Concert deleted successfully",
+          },
+        },
+      },
+    },
+    "/api/admin/bookings/cancel/{id}": {
+      post: {
+        tags: ["Admin Bookings"],
+        summary: "Cancel booking as admin",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Booking cancelled successfully",
+          },
+        },
+      },
+    },
+    "/api/admin/attendees": {
+      get: {
+        tags: ["Admin Attendees"],
+        summary: "Get attendees by booking id",
+        parameters: [
+          {
+            name: "bookingId",
+            in: "query",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Attendees fetched successfully",
+          },
+        },
+      },
+    },
+    "/api/admin/attendees/ticket/{ticketCode}": {
+      get: {
+        tags: ["Admin Attendees"],
+        summary: "Get attendee by ticket code",
+        parameters: [
+          {
+            name: "ticketCode",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Attendees fetched successfully",
+          },
+        },
+      },
+    },
+    "/api/admin/attendees/check-in": {
+      post: {
+        tags: ["Admin Attendees"],
+        summary: "Check in attendee by ticket code",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/CheckInAttendeeRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Attendee checked in successfully",
+          },
+        },
+      },
+    },
     "/api/admin/ticket-categories": {
       get: {
         tags: ["Admin Ticket Categories"],
@@ -398,6 +524,15 @@ const openApiSpec = {
           },
         },
       },
+      UpdateConcertRequest: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          venue: { type: "string" },
+          startTime: { type: "string", format: "date-time" },
+          status: { type: "string" },
+        },
+      },
       CreatePaymentUrlRequest: {
         type: "object",
         required: ["bookingId"],
@@ -430,6 +565,13 @@ const openApiSpec = {
           price: { type: "number" },
           totalQuantity: { type: "integer" },
           availableQuantity: { type: "integer" },
+        },
+      },
+      CheckInAttendeeRequest: {
+        type: "object",
+        required: ["ticketCode"],
+        properties: {
+          ticketCode: { type: "string" },
         },
       },
     },

@@ -145,17 +145,21 @@ export const mockPaymentSuccessService = async (paymentId) => {
      * const result = items.map((item) => 
      * Array.from({ length: item.quantity }, () => "ticket"));
      * [
-     *    ["ticket", "ticket"],
-     *    ["ticket", "ticket", "ticket"]
-     * ]
+     *  {
+     *    id: "BI1",
+     *    quantity: 2, -> [attendee1, attendee2]
+     *  },
+     *  {
+     *    id: "BI2",
+     *    quantity: 1, -> [attendee3]
+     *  }, 
+     * ] -> Problem: Array of array of attendees
      * 
      * With flatmap:
      * [
-     *    "ticket",
-     *    "ticket",
-     *    "ticket",
-     *    "ticket",  
-     *    "ticket"
+     *    attendee1,
+     *    attendee2,
+     *    attendee3,
      * ]
      */
     const attendees = payment.booking.bookingItems.flatMap((item) =>

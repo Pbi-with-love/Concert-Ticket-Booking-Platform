@@ -1,6 +1,7 @@
 import express from "express";
 import { swaggerServe, swaggerSetup } from "./config/swagger.js";
 import errorHandler from "./middlewares/errorHandlers.js";
+import attendeeAdminRouter from "./modules/attendee/attendee.admin.route.js";
 import bookingRouter from "./modules/booking/booking.route.js";
 import bookingAdminRouter from "./modules/booking/booking.admin.route.js";
 import concertAdminRouter from "./modules/concert/concert.admin.route.js";
@@ -19,6 +20,7 @@ app.get("/health", (req, res) => {
 app.use("/api-docs", swaggerServe, swaggerSetup);
 app.use("/api/bookings", bookingRouter);
 app.use("/api/admin/bookings", bookingAdminRouter);
+app.use("/api/admin/attendees", attendeeAdminRouter);
 app.use("/api/payments", paymentRouter);
 app.use("/api/admin/concerts", concertAdminRouter);
 app.use("/api/admin/ticket-categories", ticketCategoryAdminRouter);
