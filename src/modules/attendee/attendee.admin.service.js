@@ -2,7 +2,8 @@ import AppError from "../../utils/AppError.js";
 import {
   findAttendeesByBookingIdRepository,
   findAttendeeByTicketCodeRepository,
-  markAttendeeCheckedInRepository
+  markAttendeeCheckedInRepository,
+  findAttendeesByConcertIdRepository
 } from "./attendee.admin.repository.js";
 
 export const getAttendeesByBookingIdService = async (bookingId) => {
@@ -44,3 +45,10 @@ export const checkInAttendeeService = async (ticketCode) => {
 
   return checkedInAttendee;
 };
+
+
+export const getAttendeesByConcertIdService = async (concertId) => {
+    const attendees = await findAttendeesByConcertIdRepository(concertId);
+
+    return attendees;
+}

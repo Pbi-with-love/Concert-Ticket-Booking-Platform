@@ -2,7 +2,9 @@ import {
   getAttendeesByBookingIdService,
   getAttendeeByTicketCodeService,
   checkInAttendeeService,
+  getAttendeesByConcertIdService,
 } from "./attendee.admin.service.js";
+import AppError from "../../utils/AppError.js";
 
 export const getAttendeesByBookingIdAdminController = async (
   req,
@@ -48,6 +50,29 @@ export const checkInAttendeeAdminController = async (req, res, next) => {
     res.status(200).json({
       message: "Attendee checked in successfully",
       data: attendee,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAttendeesByConcertIdAdminController = async (
+  req,
+  res,
+  next,
+) => {
+  try {
+    const concertId = req.query.concertId;
+
+    if (!concertId) {
+      throw new AppError("Concert ID is required", 400);
+    }
+
+    const attendees = await getAttendeesByConcertIdService(concertId);
+
+    res.status(200).json({
+      message: "Attendees fetched successfully",
+      data: attendees,
     });
   } catch (error) {
     next(error);

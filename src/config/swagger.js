@@ -22,6 +22,7 @@ const openApiSpec = {
     { name: "Admin Ticket Categories" },
     { name: "Admin Bookings" },
     { name: "Admin Attendees" },
+    { name: "Admin Vouchers" },
   ],
   paths: {
     "/health": {
@@ -470,6 +471,137 @@ const openApiSpec = {
         },
       },
     },
+    "/api/admin/vouchers": {
+      get: {
+        tags: ["Admin Vouchers"],
+        summary: "Get all vouchers",
+        responses: {
+          200: {
+            description: "Vouchers fetched successfully",
+          },
+        },
+      },
+      post: {
+        tags: ["Admin Vouchers"],
+        summary: "Create voucher",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/CreateVoucherRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "Voucher created successfully",
+          },
+        },
+      },
+    },
+    "/api/admin/vouchers/{id}": {
+      get: {
+        tags: ["Admin Vouchers"],
+        summary: "Get voucher by id",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Voucher fetched successfully",
+          },
+        },
+      },
+      patch: {
+        tags: ["Admin Vouchers"],
+        summary: "Update voucher",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/UpdateVoucherRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Voucher updated successfully",
+          },
+        },
+      },
+      delete: {
+        tags: ["Admin Vouchers"],
+        summary: "Delete voucher",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Voucher deleted successfully",
+          },
+        },
+      },
+    },
+    "/api/admin/vouchers/deactivate/{id}": {
+      patch: {
+        tags: ["Admin Vouchers"],
+        summary: "Deactivate voucher",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Voucher deactivated successfully",
+          },
+        },
+      },
+    },
+    "/api/admin/vouchers/activate/{id}": {
+      patch: {
+        tags: ["Admin Vouchers"],
+        summary: "Activate voucher",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Voucher activated successfully",
+          },
+        },
+      },
+    },
   },
   components: {
     schemas: {
@@ -572,6 +704,46 @@ const openApiSpec = {
         required: ["ticketCode"],
         properties: {
           ticketCode: { type: "string" },
+        },
+      },
+      CreateVoucherRequest: {
+        type: "object",
+        required: [
+          "code",
+          "discountType",
+          "discountValue",
+          "maxUsage",
+          "startDate",
+          "endDate",
+        ],
+        properties: {
+          code: { type: "string" },
+          discountType: {
+            type: "string",
+            enum: ["PERCENTAGE", "FIXED"],
+          },
+          discountValue: { type: "number" },
+          maxUsage: { type: "integer" },
+          usedCount: { type: "integer", default: 0 },
+          startDate: { type: "string", format: "date-time" },
+          endDate: { type: "string", format: "date-time" },
+          isActive: { type: "boolean", default: true },
+        },
+      },
+      UpdateVoucherRequest: {
+        type: "object",
+        properties: {
+          code: { type: "string" },
+          discountType: {
+            type: "string",
+            enum: ["PERCENTAGE", "FIXED"],
+          },
+          discountValue: { type: "number" },
+          maxUsage: { type: "integer" },
+          usedCount: { type: "integer" },
+          startDate: { type: "string", format: "date-time" },
+          endDate: { type: "string", format: "date-time" },
+          isActive: { type: "boolean" },
         },
       },
     },

@@ -45,3 +45,17 @@ export const markAttendeeCheckedInRepository = async (ticketCode) => {
     },
   });
 };
+
+export const findAttendeesByConcertIdRepository = async (concertId) => {
+  return prisma.attendee.findMany({
+    where: {
+      ticketCategory: {
+        concertId,
+      },
+    },
+    include: {
+      ticketCategory: true,
+      bookingItem: true,
+    },
+  });
+};
